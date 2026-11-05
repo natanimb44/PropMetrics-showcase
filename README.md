@@ -12,49 +12,36 @@ This repo is a showcase only — architecture, results, and methodology, with no
 
 ```mermaid
 flowchart LR
-    subgraph Data Sources
-        A1[NBA Stats API]
-        A2[nflreadpy]
-        A3[ESPN Injury Reports]
-        A4[SportsGameOdds API]
+    subgraph NBA Pipeline
+        A1[NBA Stats API] --> B1[NBA FastAPI Service]
+        A3a[ESPN Injury Reports] --> B1
+        A4a[SportsGameOdds API] --> B1
+        B1 --> C1a[Feature Engineering]
+        C1a --> C2a["Models: RF / GBM / Linear Regression ensemble"]
+        C2a --> C3a[Monte Carlo Uncertainty]
     end
 
-    subgraph Backends
-        B1[NBA FastAPI Service]
-        B2[NFL FastAPI Service]
+    subgraph NFL Pipeline
+        A2[nflreadpy] --> B2[NFL FastAPI Service]
+        A3b[ESPN Injury Reports] --> B2
+        A4b[SportsGameOdds API] --> B2
+        B2 --> C1b[Feature Engineering]
+        C1b --> C2b["Quantile-Regression Gradient Boosting + volume x efficiency decomposition"]
+        C2b --> C3b[Monte Carlo Quantile Recombination]
     end
 
-    subgraph ML
-        C1[Feature Engineering]
-        C2[Trained Models]
-        C3[Uncertainty Engine]
-    end
-
-    D[Shared EV / Confidence / Risk Scoring]
+    D[Shared EV / Confidence / Risk Scoring - ported verbatim between sports]
     E[(SQLite)]
     F[React Native App - Expo]
 
-    A1 --> B1
-    A3 --> B1
-    A4 --> B1
-    A2 --> B2
-    A3 --> B2
-    A4 --> B2
-
-    B1 --> C1
-    B2 --> C1
-    C1 --> C2
-    C2 --> C3
-    C3 --> D
+    C3a --> D
+    C3b --> D
     D --> E
     D --> F
-
-    B1 -. Railway .-> F
-    B2 -. Railway .-> F
-    F -. Vercel .-> Users((Users))
+    F --> Users((Users))
 ```
 
-Two independently deployed FastAPI backends (one per sport), each with its own data pipeline and model architecture, feeding a single shared React Native frontend. Confidence, risk, and expected-value scoring logic is ported byte-for-byte between the two services so a "HIGH confidence" or "+EV" badge means the same thing regardless of sport.
+Two independently deployed FastAPI backends (one per sport, on Railway), each with its own data pipeline and a genuinely different model architecture — NFL uses quantile-regression Gradient Boosting with a volume × efficiency decomposition, NBA uses a Random Forest / Gradient Boosting / Linear Regression ensemble with Monte Carlo uncertainty estimation. The only component actually shared between them is the EV/confidence/risk scoring layer, ported byte-for-byte so a "HIGH confidence" or "+EV" badge means the same thing regardless of sport. Both feed a single shared React Native frontend (on Vercel).
 
 ---
 
